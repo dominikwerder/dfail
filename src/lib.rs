@@ -1,6 +1,6 @@
 // Want to use beta toolchain  #![feature(specialization)]
 
-#[macro_use] extern crate log;
+/* #[macro_use] */ extern crate log;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate failure_derive;
@@ -43,18 +43,18 @@ Style:
 21 Reset Bold, similar for the others...
 */
 
-static LOGGER_INIT: std::sync::atomic::AtomicUsize = std::sync::atomic::ATOMIC_USIZE_INIT;
+pub static LOGGER_INIT: std::sync::atomic::AtomicUsize = std::sync::atomic::ATOMIC_USIZE_INIT;
 
 lazy_static! {
-  static ref LOGGER_MX: std::sync::Mutex<u32> = Default::default();
-  static ref LOG_LEVEL: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(9);
+  pub static ref LOGGER_MX: std::sync::Mutex<u32> = Default::default();
+  pub static ref LOG_LEVEL: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(9);
 }
 
 #[cfg(not(feature = "theme_dark"))]
-static G_COLORS: [&'static str; 9] = ["31", "32", "33", "34", "35", "36", "31;1;107", "32;1;107", "30;1;107"];
+pub static G_COLORS: [&'static str; 9] = ["31", "32", "33", "34", "35", "36", "31;1;107", "32;1;107", "30;1;107"];
 
 #[cfg(feature = "theme_dark")]
-static G_COLORS: [&'static str; 9] = ["31", "32", "33", "34", "35", "36", "31;1;100", "32;1;100", "33;1;100"];
+pub static G_COLORS: [&'static str; 9] = ["31", "32", "33", "34", "35", "36", "31;1;100", "32;1;100", "33;1;100"];
 
 #[allow(unused_macros)]
 #[macro_export]
@@ -137,11 +137,11 @@ macro_rules! jfaildb {
 	($x:expr) => (jfail!("{:?}", $x))
 }
 
-fn logger_init() {
+fn _________logger_init() {
   use std::sync::atomic::Ordering::SeqCst;
   if LOGGER_INIT.load(SeqCst) == 0 {
     match LOGGER_MX.lock() {
-      Ok(m) => {
+      Ok(_mutex) => {
         if LOGGER_INIT.load(SeqCst) == 0 {
           env_logger::init();
           LOGGER_INIT.store(1, SeqCst);
@@ -168,9 +168,9 @@ pub fn thrid() -> String {
 }
 }
 
-fn jsons<T: serde::Serialize>(x: &T) -> String {
+fn ____jsons<T: serde::Serialize>(x: &T) -> String {
   serde_json::to_string_pretty(&x)
-  .unwrap_or_else(|e| { r#"{"error": "CAN NOT FORMAT"}"#.into() })
+  .unwrap_or_else(|_e| { r#"{"error": "CAN NOT FORMAT"}"#.into() })
 }
 
 #[derive(Debug, Fail, Serialize)]
@@ -184,13 +184,13 @@ pub struct JFail {
 }
 
 impl JFail {
-  fn into_fail_box(self) -> Box<failure::Fail> {
+  pub fn into_fail_box(self) -> Box<failure::Fail> {
     Box::new(self) as Box<failure::Fail>
   }
-  fn why(&self) -> &String {
+  pub fn why(&self) -> &String {
     &self.why
   }
-  fn to_json_string(&self) -> String {
+  pub fn to_json_string(&self) -> String {
     serde_json::to_string_pretty(self)
     .unwrap_or_else(|e| {
       format!("can't format the error: {}", e)
@@ -211,7 +211,7 @@ impl From<JFail> for String {
 }
 
 impl From<()> for JFail {
-  fn from(x: ()) -> Self {
+  fn from(_: ()) -> Self {
     jfail!("Error From<()>, no info.")
   }
 }
