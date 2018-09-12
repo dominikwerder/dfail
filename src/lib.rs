@@ -134,7 +134,9 @@ macro_rules! jfailn {
 
 #[macro_export]
 macro_rules! jfaildb {
-	($x:expr) => (jfail!("{:?}", $x))
+  ($e:expr, $fmt:expr, $($x:expr),*) => (jfail!(concat!($fmt, "  Error: {:?}"), $($x),*, $e));
+  ($e:expr, $fmt:expr) => (jfail!(concat!($fmt, "  Error: {:?}"), $e));
+  ($e:expr) => (jfail!("{:?}", $e));
 }
 
 fn _________logger_init() {
@@ -199,15 +201,15 @@ impl JFail {
 }
 
 impl std::fmt::Display for JFail {
-	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-		write!(fmt, "{}", self.to_json_string())
-	}
+  fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(fmt, "{}", self.to_json_string())
+  }
 }
 
 impl From<JFail> for String {
-	fn from(x: JFail) -> String {
-		x.to_json_string()
-	}
+  fn from(x: JFail) -> String {
+    x.to_json_string()
+  }
 }
 
 impl From<()> for JFail {
