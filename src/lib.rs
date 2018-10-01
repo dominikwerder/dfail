@@ -93,6 +93,7 @@ macro_rules! jfail {
       thread: jfail_fn::thrid(),
       why: format!(concat!($fmt), $($x),*),
       nested: None,
+      backtrace: JFail::create_backtrace(),
     }
   );
   ($fmt:expr) => (
@@ -102,6 +103,7 @@ macro_rules! jfail {
       thread: jfail_fn::thrid(),
       why: $fmt.to_string(),
       nested: None,
+      backtrace: JFail::create_backtrace(),
     }
   );
 }
@@ -119,6 +121,7 @@ macro_rules! jfailn {
       thread: jfail_fn::thrid(),
       why: format!(concat!($fmt), $($x),*),
       nested: Some(Box::new($nested)),
+      backtrace: None,
     }
   );
   ($nested:expr, $fmt:expr) => (
@@ -128,6 +131,7 @@ macro_rules! jfailn {
       thread: jfail_fn::thrid(),
       why: $fmt.to_string(),
       nested: Some(Box::new($nested)),
+      backtrace: None,
     }
   );
 }
@@ -183,6 +187,15 @@ pub struct JFail {
   pub thread: String,
   pub why: String,
   pub nested: Option<Box<JFail>>,
+  #[serde(skip_deserializing, skip_serializing_if = "Option::is_none", serialize_with="serialize_backtrace")]
+  pub backtrace: Option<failure::Backtrace>,
+}
+
+fn serialize_backtrace<S>(t: &Option<failure::Backtrace>, s: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+  match t {
+    None => s.serialize_none(),
+    Some(x) => s.collect_seq(format!("{}", x).split("\n"))
+  }
 }
 
 impl JFail {
@@ -197,6 +210,9 @@ impl JFail {
     .unwrap_or_else(|e| {
       format!("can't format the error: {}", e)
     })
+  }
+  pub fn create_backtrace() -> Option<failure::Backtrace> {
+    Some(failure::Backtrace::new())
   }
 }
 
