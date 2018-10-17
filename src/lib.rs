@@ -92,7 +92,7 @@ macro_rules! jfail {
       line: Some(line!()),
       thread: jfail_fn::thrid(),
       why: format!(concat!($fmt), $($x),*),
-      nested: None,
+      nested: JFail::make_nested(None, None),
       backtrace: JFail::create_backtrace(),
     }
   );
@@ -102,7 +102,7 @@ macro_rules! jfail {
       line: Some(line!()),
       thread: jfail_fn::thrid(),
       why: $fmt.to_string(),
-      nested: None,
+      nested: JFail::make_nested(None, None),
       backtrace: JFail::create_backtrace(),
     }
   );
@@ -120,7 +120,7 @@ macro_rules! jfailn {
       line: Some(line!()),
       thread: jfail_fn::thrid(),
       why: format!(concat!($fmt), $($x),*),
-      nested: Some(Box::new($nested)),
+      nested: JFail::make_nested(Some(Box::new($nested)), None),
       backtrace: None,
     }
   );
@@ -130,7 +130,22 @@ macro_rules! jfailn {
       line: Some(line!()),
       thread: jfail_fn::thrid(),
       why: $fmt.to_string(),
-      nested: Some(Box::new($nested)),
+      nested: JFail::make_nested(Some(Box::new($nested)), None),
+      backtrace: None,
+    }
+  );
+}
+
+#[allow(unused_macros)]
+#[macro_export]
+macro_rules! jfail_combine {
+  ($e1:expr, $e2:expr, $fmt:expr) => (
+    JFail {
+      file: Some(file!().to_string()),
+      line: Some(line!()),
+      thread: jfail_fn::thrid(),
+      why: $fmt.to_string(),
+      nested: JFail::make_nested(Some(Box::new($e1)), Some(Box::new($e2))),
       backtrace: None,
     }
   );
@@ -180,13 +195,34 @@ fn ____jsons<T: serde::Serialize>(x: &T) -> String {
 }
 
 #[derive(Debug, Fail, Serialize)]
+pub struct Nested {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub e0: Option<Box<JFail>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub e1: Option<Box<JFail>>,
+}
+
+impl Nested {
+  fn is_empty(&self) -> bool {
+    self.e0.is_none() && self.e1.is_none()
+  }
+}
+
+impl std::fmt::Display for Nested {
+  fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(fmt, "({:?}, {:?})", self.e0, self.e1)
+  }
+}
+
+#[derive(Debug, Fail, Serialize)]
 //#[fail(display = "{}", why)]
 pub struct JFail {
   pub file: Option<String>,
   pub line: Option<u32>,
   pub thread: String,
   pub why: String,
-  pub nested: Option<Box<JFail>>,
+  #[serde(skip_serializing_if = "Nested::is_empty")]
+  pub nested: Nested,
   #[serde(skip_deserializing, skip_serializing_if = "Option::is_none", serialize_with="serialize_backtrace")]
   pub backtrace: Option<failure::Backtrace>,
 }
@@ -213,6 +249,9 @@ impl JFail {
   }
   pub fn create_backtrace() -> Option<failure::Backtrace> {
     Some(failure::Backtrace::new())
+  }
+  pub fn make_nested(e0: Option<Box<JFail>>, e1: Option<Box<JFail>>) -> Nested {
+    Nested { e0, e1 }
   }
 }
 
