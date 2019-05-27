@@ -41,7 +41,7 @@ macro_rules! failn {
     }
   );
   ($nested:expr, $fmt:expr) => (
-    Fail {
+    $crate::Fail {
       file: Some(file!().to_string()),
       line: Some(line!()),
       thread: $crate::__thrid(),
